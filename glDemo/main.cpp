@@ -53,10 +53,16 @@ GLuint				textureShader_transformMat;
 GLuint				beastShader;
 GLint				beastShader_mvpMatrix;
 
+GLuint				beastHueShader;
+GLint				beastHueShader_modelMatrix;
+GLint				beastHueShader_viewMatrix;
+GLint				beastHueShader_projectionMatrix;
+GLint				beastHueShader_cylinderPos;
+
 
 // Window size
-const unsigned int initWidth = 1024;
-const unsigned int initHeight = 768;
+unsigned int windowWidth = 1024;
+unsigned int windowHeight = 768;
 
 
 // cylinder model
@@ -100,7 +106,7 @@ int main() {
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 1);
 
-	GLFWwindow* window = glfwCreateWindow(initWidth, initHeight, "CIS5013", NULL, NULL);
+	GLFWwindow* window = glfwCreateWindow(windowWidth, windowHeight, "CIS5013", NULL, NULL);
 
 	// Check window was created successfully
 	if (window == NULL)
@@ -125,7 +131,7 @@ int main() {
 
 	
 	// Setup window's initial size
-	resizeWindow(window, initWidth, initHeight);
+	resizeWindow(window, windowWidth, windowHeight);
 
 #pragma endregion
 
@@ -146,7 +152,7 @@ int main() {
 	//
 	// Setup Textures, VBOs and other scene objects
 	//
-	mainCamera = new ArcballCamera(-33.0f, 45.0f, 8.0f, 55.0f, (float)initWidth/(float)initHeight, 0.1f, 500.0f);
+	mainCamera = new ArcballCamera(-33.0f, 45.0f, 8.0f, 55.0f, (float)windowWidth/(float)windowHeight, 0.1f, 500.0f);
 	
 	groundMesh = new AIMesh(string("Assets\\ground-surface\\surface01.obj"));
 	if (groundMesh) {
@@ -164,11 +170,17 @@ int main() {
 	// Load shaders
 	textureShader = setupShaders(string("Assets\\Shaders\\basic_texture.vert"), string("Assets\\Shaders\\basic_texture.frag"));
 	beastShader = setupShaders(string("Assets\\beast\\beast_shader.vert"), string("Assets\\beast\\beast_shader.frag"));
-
+	beastHueShader = setupShaders(string("Assets\\beast\\beast-hue-effect.vert"), string("Assets\\beast\\beast-hue-effect.frag"));
+	
 	// Get uniform variable locations for setting values later during rendering
 
 	textureShader_transformMat = glGetUniformLocation(textureShader, "transformMat"); // sane varable but in different shader!
 	beastShader_mvpMatrix = glGetUniformLocation(beastShader, "mvpMatrix");
+
+	beastHueShader_modelMatrix = glGetUniformLocation(beastHueShader, "modelMatrix");
+	beastHueShader_viewMatrix = glGetUniformLocation(beastHueShader, "viewMatrix");
+	beastHueShader_projectionMatrix = glGetUniformLocation(beastHueShader, "projectionMatrix");
+	beastHueShader_cylinderPos = glGetUniformLocation(beastHueShader, "cylinderPos");
 
 
 	// Setup random numbers for randomValue
@@ -213,15 +225,16 @@ void renderScene()
 	// Clear the rendering window
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	mat4 cameraTransform = mainCamera->projectionTransform() * mainCamera->viewTransform() * translate(identity<mat4>(), -beastPos);
-	mat4 T;
+	// Get camera matrices
+	mat4 cameraProjection = mainCamera->projectionTransform();
+	mat4 cameraView = mainCamera->viewTransform() * translate(identity<mat4>(), -beastPos);
 
 	// Render ground
 	if (groundMesh) {
 
 		glUseProgram(textureShader);
 
-		T = cameraTransform * glm::scale(identity<mat4>(), vec3(10.0f, 1.0f, 10.0f));
+		mat4 T = cameraProjection * cameraView * glm::scale(identity<mat4>(), vec3(10.0f, 1.0f, 10.0f));
 		glUniformMatrix4fv(textureShader_transformMat, 1, GL_FALSE, (GLfloat*)&T);
 
 		groundMesh->preRender();
@@ -232,30 +245,36 @@ void renderScene()
 
 	if (creatureMesh) {
 	
-		glUseProgram(beastShader);
+		glUseProgram(beastHueShader);
 
-		T = cameraTransform * glm::translate(identity<mat4>(), beastPos) * eulerAngleY<float>(glm::radians<float>(beastRotation));
+		mat4 modelTransform = glm::translate(identity<mat4>(), beastPos) * eulerAngleY<float>(glm::radians<float>(beastRotation));
 
 		// Setup uniforms
-		glUniformMatrix4fv(beastShader_mvpMatrix, 1, GL_FALSE, (GLfloat*)&T);
+		glUniformMatrix4fv(beastHueShader_modelMatrix, 1, GL_FALSE, (GLfloat*)&modelTransform);
+		glUniformMatrix4fv(beastHueShader_viewMatrix, 1, GL_FALSE, (GLfloat*)&cameraView);
+		glUniformMatrix4fv(beastHueShader_projectionMatrix, 1, GL_FALSE, (GLfloat*)&cameraProjection);
+		glUniform3fv(beastHueShader_cylinderPos, 1, (GLfloat*)&cylinderPos);
+
 		creatureMesh->preRender();
 		creatureMesh->render();
 		creatureMesh->postRender();
 	}
 
-	T = cameraTransform * glm::translate(identity<mat4>(), cylinderPos);
-	
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	if (cylinderMesh) {
 
-	cylinderMesh->preRender();
-	cylinderMesh->render(T);
-	cylinderMesh->postRender();
+		mat4 T = cameraProjection * cameraView * glm::translate(identity<mat4>(), cylinderPos);
 
-	glDisable(GL_BLEND);
-	
-	glUseProgram(0);
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+		cylinderMesh->preRender();
+		cylinderMesh->render(T);
+		cylinderMesh->postRender();
+
+		glDisable(GL_BLEND);
+
+		glUseProgram(0);
+	}
 }
 
 
@@ -310,7 +329,11 @@ void resizeWindow(GLFWwindow* window, int width, int height)
 		mainCamera->setAspect((float)width / (float)height);
 	}
 
-	glViewport(0, 0, width, height);		// Draw into entire window
+	// Update viewport to cover the entire window
+	glViewport(0, 0, width, height);
+
+	windowWidth = width;
+	windowHeight = height;
 }
 
 

@@ -176,6 +176,8 @@
     <None Include="Assets\beast\beast_shader.vert" />
     <None Include="Assets\cylinder\cylinder.frag" />
     <None Include="Assets\cylinder\cylinder.vert" />
+    <None Include="Assets\Shaders\basic_texture.frag" />
+    <None Include="Assets\Shaders\basic_texture.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

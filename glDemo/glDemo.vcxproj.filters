@@ -122,5 +122,11 @@
     <None Include="Assets\beast\beast_shader.vert">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="Assets\Shaders\basic_texture.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Assets\Shaders\basic_texture.vert">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>
