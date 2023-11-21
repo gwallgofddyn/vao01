@@ -27,6 +27,11 @@ AIMesh::AIMesh(std::string filename, GLuint meshIndex) {
 	glBindBuffer(GL_ARRAY_BUFFER, meshVertexPosBuffer);
 	glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * sizeof(aiVector3D), mesh->mVertices, GL_STATIC_DRAW);
 
+	// Setup VBO for vertex normal data
+	glGenBuffers(1, &meshNormalBuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, meshNormalBuffer);
+	glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * sizeof(aiVector3D), mesh->mNormals, GL_STATIC_DRAW);
+
 	if (mesh->mTextureCoords && mesh->mTextureCoords[0]) {
 
 		// Setup VBO for texture coordinate data (for now use uvw channel 0 only when accessing mesh->mTextureCoords)
@@ -78,6 +83,10 @@ void AIMesh::preRender() {
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (const GLvoid*)0);
 	glEnableVertexAttribArray(0);
 
+	glBindBuffer(GL_ARRAY_BUFFER, meshNormalBuffer);
+	glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, (const GLvoid*)0);
+	glEnableVertexAttribArray(3);
+
 	if (meshTexCoordBuffer != 0) {
 
 		glBindBuffer(GL_ARRAY_BUFFER, meshTexCoordBuffer);
@@ -104,6 +113,7 @@ void AIMesh::render() {
 void AIMesh::postRender() {
 
 	glDisableVertexAttribArray(0);
+	glDisableVertexAttribArray(3);
 
 	if (meshTexCoordBuffer != 0) {
 

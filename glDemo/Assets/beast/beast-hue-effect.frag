@@ -50,8 +50,8 @@ void main(void) {
     vec3 hsvRed = vec3(0.0, hsv.yz); // copy hsv but set hue to 0 (red)
 
     // calculate blend parameter t that lies between 0 (hsv) and 1 (hsvRed)
-    //float t = step(dist, 1.25);
-    float t = smoothstep(1.5, 1.25, dist);
+    float t = step(dist, 1.25);
+    //float t = smoothstep(1.5, 1.25, dist);
 
     // now lerp between hsv and hsvRed using the blend parameter t
     vec3 hsvFinal = mix(hsv, hsvRed, t);

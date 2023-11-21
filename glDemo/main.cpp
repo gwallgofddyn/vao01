@@ -15,6 +15,27 @@ using namespace std;
 using namespace glm;
 
 
+struct PointLight {
+
+	vec3 pos;
+	vec3 colour;
+	vec3 attenuation; // x=constant, y=linear, z=quadratic
+
+	PointLight() {
+
+		pos = vec3(0.0f, 0.0f, 0.0f);
+		colour = vec3(1.0f, 1.0f, 1.0f);
+		attenuation = vec3(1.0f, 1.0f, 1.0f);
+	}
+
+	PointLight(vec3 pos, vec3 colour = vec3(1.0f, 1.0f, 1.0f), vec3 attenuation = vec3(1.0f, 1.0f, 1.0f)) {
+
+		this->pos = pos;
+		this->colour = colour;
+		this->attenuation = attenuation;
+	}
+};
+
 #pragma region Global variables
 
 // Main clock for tracking time (for animation / interaction)
@@ -59,6 +80,16 @@ GLint				beastHueShader_viewMatrix;
 GLint				beastHueShader_projectionMatrix;
 GLint				beastHueShader_cylinderPos;
 
+// Texture-point light shader
+GLuint				texPointLightShader;
+GLint				texPointLightShader_modelMatrix;
+GLint				texPointLightShader_viewMatrix;
+GLint				texPointLightShader_projMatrix;
+GLint				texPointLightShader_texture;
+GLint				texPointLightShader_lightPos;
+GLint				texPointLightShader_lightColour;
+GLint				texPointLightShader_lightAttenuation;
+
 
 // Window size
 unsigned int windowWidth = 1024;
@@ -71,6 +102,9 @@ vec3 cylinderPos = vec3(-2.0f, 2.0f, 0.0f);
 // beast model
 vec3 beastPos = vec3(2.0f, 0.0f, 0.0f);
 float beastRotation = 0.0f;
+
+// Setup single example light (use array to make adding other lights easier)
+PointLight lights[1] = { PointLight(vec3(0.0f, 1.0f, 0.0), vec3(1.0f, 0.0f, 0.0f)) };
 
 
 #pragma endregion
@@ -171,16 +205,27 @@ int main() {
 	textureShader = setupShaders(string("Assets\\Shaders\\basic_texture.vert"), string("Assets\\Shaders\\basic_texture.frag"));
 	beastShader = setupShaders(string("Assets\\beast\\beast_shader.vert"), string("Assets\\beast\\beast_shader.frag"));
 	beastHueShader = setupShaders(string("Assets\\beast\\beast-hue-effect.vert"), string("Assets\\beast\\beast-hue-effect.frag"));
-	
+	texPointLightShader = setupShaders(string("Assets\\Shaders\\texture-point.vert"), string("Assets\\Shaders\\texture-point.frag"));
+
 	// Get uniform variable locations for setting values later during rendering
 
 	textureShader_transformMat = glGetUniformLocation(textureShader, "transformMat"); // sane varable but in different shader!
+
 	beastShader_mvpMatrix = glGetUniformLocation(beastShader, "mvpMatrix");
 
 	beastHueShader_modelMatrix = glGetUniformLocation(beastHueShader, "modelMatrix");
 	beastHueShader_viewMatrix = glGetUniformLocation(beastHueShader, "viewMatrix");
 	beastHueShader_projectionMatrix = glGetUniformLocation(beastHueShader, "projectionMatrix");
 	beastHueShader_cylinderPos = glGetUniformLocation(beastHueShader, "cylinderPos");
+
+	texPointLightShader_modelMatrix = glGetUniformLocation(texPointLightShader, "modelMatrix");
+	texPointLightShader_viewMatrix = glGetUniformLocation(texPointLightShader, "viewMatrix");
+	texPointLightShader_projMatrix = glGetUniformLocation(texPointLightShader, "projMatrix");
+	texPointLightShader_texture = glGetUniformLocation(texPointLightShader, "texture");
+	texPointLightShader_lightPos = glGetUniformLocation(texPointLightShader, "lightPos");
+	texPointLightShader_lightColour = glGetUniformLocation(texPointLightShader, "lightColour");
+	texPointLightShader_lightAttenuation = glGetUniformLocation(texPointLightShader, "lightAttenuation");
+
 
 
 	// Setup random numbers for randomValue
@@ -229,13 +274,22 @@ void renderScene()
 	mat4 cameraProjection = mainCamera->projectionTransform();
 	mat4 cameraView = mainCamera->viewTransform() * translate(identity<mat4>(), -beastPos);
 
-	// Render ground
+	// Render ground with light source!
 	if (groundMesh) {
 
-		glUseProgram(textureShader);
+		glUseProgram(texPointLightShader);
 
-		mat4 T = cameraProjection * cameraView * glm::scale(identity<mat4>(), vec3(10.0f, 1.0f, 10.0f));
-		glUniformMatrix4fv(textureShader_transformMat, 1, GL_FALSE, (GLfloat*)&T);
+		mat4 modelTransform = glm::scale(identity<mat4>(), vec3(10.0f, 1.0f, 10.0f));
+
+		glUniformMatrix4fv(texPointLightShader_modelMatrix, 1, GL_FALSE, (GLfloat*)&modelTransform);
+		glUniformMatrix4fv(texPointLightShader_viewMatrix, 1, GL_FALSE, (GLfloat*)&cameraView);
+		glUniformMatrix4fv(texPointLightShader_projMatrix, 1, GL_FALSE, (GLfloat*)&cameraProjection);
+
+		glUniform1i(texPointLightShader_texture, 0); // set to point to texture unit 0 for AIMeshes
+
+		glUniform3fv(texPointLightShader_lightPos, 1, (GLfloat*)&(lights[0].pos));
+		glUniform3fv(texPointLightShader_lightColour, 1, (GLfloat*)&(lights[0].colour));
+		glUniform3fv(texPointLightShader_lightAttenuation, 1, (GLfloat*)&(lights[0].attenuation));
 
 		groundMesh->preRender();
 		groundMesh->render();

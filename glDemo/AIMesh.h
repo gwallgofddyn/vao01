@@ -8,6 +8,7 @@ class AIMesh {
 
 	GLuint				meshVertexPosBuffer = 0;
 	GLuint				meshTexCoordBuffer = 0;
+	GLuint				meshNormalBuffer = 0;
 	GLuint				meshFaceIndexBuffer = 0;
 
 	GLuint				textureID = 0;
