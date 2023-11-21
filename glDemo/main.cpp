@@ -14,6 +14,23 @@
 using namespace std;
 using namespace glm;
 
+struct DirectionalLight {
+
+	vec3 direction;
+	vec3 colour;
+	
+	DirectionalLight() {
+
+		direction = vec3(0.0f, 1.0f, 0.0f); // default to point upwards
+		colour = vec3(1.0f, 1.0f, 1.0f);
+	}
+
+	DirectionalLight(vec3 direction, vec3 colour = vec3(1.0f, 1.0f, 1.0f)) {
+
+		this->direction = direction;
+		this->colour = colour;
+	}
+};
 
 struct PointLight {
 
@@ -80,6 +97,16 @@ GLint				beastHueShader_viewMatrix;
 GLint				beastHueShader_projectionMatrix;
 GLint				beastHueShader_cylinderPos;
 
+
+// Texture-directional light shader
+GLuint				texDirLightShader;
+GLint				texDirLightShader_modelMatrix;
+GLint				texDirLightShader_viewMatrix;
+GLint				texDirLightShader_projMatrix;
+GLint				texDirLightShader_texture;
+GLint				texDirLightShader_lightDirection;
+GLint				texDirLightShader_lightColour;
+
 // Texture-point light shader
 GLuint				texPointLightShader;
 GLint				texPointLightShader_modelMatrix;
@@ -89,6 +116,7 @@ GLint				texPointLightShader_texture;
 GLint				texPointLightShader_lightPos;
 GLint				texPointLightShader_lightColour;
 GLint				texPointLightShader_lightAttenuation;
+
 
 
 // Window size
@@ -103,7 +131,12 @@ vec3 cylinderPos = vec3(-2.0f, 2.0f, 0.0f);
 vec3 beastPos = vec3(2.0f, 0.0f, 0.0f);
 float beastRotation = 0.0f;
 
-// Setup single example light (use array to make adding other lights easier)
+
+// Directional light example
+float directLightTheta = 0.0f;
+DirectionalLight directLight = DirectionalLight(vec3(cosf(directLightTheta), sinf(directLightTheta), 0.0f));
+
+// Setup point light example light (use array to make adding other lights easier)
 PointLight lights[1] = { PointLight(vec3(0.0f, 1.0f, 0.0), vec3(1.0f, 0.0f, 0.0f)) };
 
 
@@ -206,6 +239,7 @@ int main() {
 	beastShader = setupShaders(string("Assets\\beast\\beast_shader.vert"), string("Assets\\beast\\beast_shader.frag"));
 	beastHueShader = setupShaders(string("Assets\\beast\\beast-hue-effect.vert"), string("Assets\\beast\\beast-hue-effect.frag"));
 	texPointLightShader = setupShaders(string("Assets\\Shaders\\texture-point.vert"), string("Assets\\Shaders\\texture-point.frag"));
+	texDirLightShader = setupShaders(string("Assets\\Shaders\\texture-directional.vert"), string("Assets\\Shaders\\texture-directional.frag"));
 
 	// Get uniform variable locations for setting values later during rendering
 
@@ -218,6 +252,13 @@ int main() {
 	beastHueShader_projectionMatrix = glGetUniformLocation(beastHueShader, "projectionMatrix");
 	beastHueShader_cylinderPos = glGetUniformLocation(beastHueShader, "cylinderPos");
 
+	texDirLightShader_modelMatrix = glGetUniformLocation(texDirLightShader, "modelMatrix");
+	texDirLightShader_viewMatrix = glGetUniformLocation(texDirLightShader, "viewMatrix");
+	texDirLightShader_projMatrix = glGetUniformLocation(texDirLightShader, "projMatrix");
+	texDirLightShader_texture = glGetUniformLocation(texDirLightShader, "texture");
+	texDirLightShader_lightDirection = glGetUniformLocation(texDirLightShader, "lightDirection");
+	texDirLightShader_lightColour = glGetUniformLocation(texDirLightShader, "lightColour");
+
 	texPointLightShader_modelMatrix = glGetUniformLocation(texPointLightShader, "modelMatrix");
 	texPointLightShader_viewMatrix = glGetUniformLocation(texPointLightShader, "viewMatrix");
 	texPointLightShader_projMatrix = glGetUniformLocation(texPointLightShader, "projMatrix");
@@ -225,6 +266,7 @@ int main() {
 	texPointLightShader_lightPos = glGetUniformLocation(texPointLightShader, "lightPos");
 	texPointLightShader_lightColour = glGetUniformLocation(texPointLightShader, "lightColour");
 	texPointLightShader_lightAttenuation = glGetUniformLocation(texPointLightShader, "lightAttenuation");
+
 
 
 
@@ -277,19 +319,18 @@ void renderScene()
 	// Render ground with light source!
 	if (groundMesh) {
 
-		glUseProgram(texPointLightShader);
+		glUseProgram(texDirLightShader);
 
 		mat4 modelTransform = glm::scale(identity<mat4>(), vec3(10.0f, 1.0f, 10.0f));
 
-		glUniformMatrix4fv(texPointLightShader_modelMatrix, 1, GL_FALSE, (GLfloat*)&modelTransform);
-		glUniformMatrix4fv(texPointLightShader_viewMatrix, 1, GL_FALSE, (GLfloat*)&cameraView);
-		glUniformMatrix4fv(texPointLightShader_projMatrix, 1, GL_FALSE, (GLfloat*)&cameraProjection);
+		glUniformMatrix4fv(texDirLightShader_modelMatrix, 1, GL_FALSE, (GLfloat*)&modelTransform);
+		glUniformMatrix4fv(texDirLightShader_viewMatrix, 1, GL_FALSE, (GLfloat*)&cameraView);
+		glUniformMatrix4fv(texDirLightShader_projMatrix, 1, GL_FALSE, (GLfloat*)&cameraProjection);
 
-		glUniform1i(texPointLightShader_texture, 0); // set to point to texture unit 0 for AIMeshes
+		glUniform1i(texDirLightShader_texture, 0); // set to point to texture unit 0 for AIMeshes
 
-		glUniform3fv(texPointLightShader_lightPos, 1, (GLfloat*)&(lights[0].pos));
-		glUniform3fv(texPointLightShader_lightColour, 1, (GLfloat*)&(lights[0].colour));
-		glUniform3fv(texPointLightShader_lightAttenuation, 1, (GLfloat*)&(lights[0].attenuation));
+		glUniform3fv(texDirLightShader_lightDirection, 1, (GLfloat*)&(directLight.direction));
+		glUniform3fv(texDirLightShader_lightColour, 1, (GLfloat*)&(directLight.colour));
 
 		groundMesh->preRender();
 		groundMesh->render();
@@ -299,15 +340,17 @@ void renderScene()
 
 	if (creatureMesh) {
 	
-		glUseProgram(beastHueShader);
+		//glUseProgram(beastHueShader);
 
 		mat4 modelTransform = glm::translate(identity<mat4>(), beastPos) * eulerAngleY<float>(glm::radians<float>(beastRotation));
 
+		glUniformMatrix4fv(texDirLightShader_modelMatrix, 1, GL_FALSE, (GLfloat*)&modelTransform);
+
 		// Setup uniforms
-		glUniformMatrix4fv(beastHueShader_modelMatrix, 1, GL_FALSE, (GLfloat*)&modelTransform);
-		glUniformMatrix4fv(beastHueShader_viewMatrix, 1, GL_FALSE, (GLfloat*)&cameraView);
-		glUniformMatrix4fv(beastHueShader_projectionMatrix, 1, GL_FALSE, (GLfloat*)&cameraProjection);
-		glUniform3fv(beastHueShader_cylinderPos, 1, (GLfloat*)&cylinderPos);
+		//glUniformMatrix4fv(beastHueShader_modelMatrix, 1, GL_FALSE, (GLfloat*)&modelTransform);
+		//glUniformMatrix4fv(beastHueShader_viewMatrix, 1, GL_FALSE, (GLfloat*)&cameraView);
+		//glUniformMatrix4fv(beastHueShader_projectionMatrix, 1, GL_FALSE, (GLfloat*)&cameraProjection);
+		//glUniform3fv(beastHueShader_cylinderPos, 1, (GLfloat*)&cylinderPos);
 
 		creatureMesh->preRender();
 		creatureMesh->render();
@@ -329,6 +372,16 @@ void renderScene()
 
 		glUseProgram(0);
 	}
+
+	// Render light source
+	glUseProgram(0);
+	mat4 cameraT = cameraProjection * cameraView;
+	glLoadMatrixf((GLfloat*)&cameraT);
+	glEnable(GL_POINT_SMOOTH);
+	glPointSize(10.0f);
+	glBegin(GL_POINTS);
+	glVertex3f(directLight.direction.x * 10.0f, directLight.direction.y * 10.0f, directLight.direction.z * 10.0f);
+	glEnd();
 }
 
 
@@ -344,6 +397,14 @@ void updateScene() {
 	}
 
 	cylinderMesh->update(tDelta);
+
+	// update main light source
+	directLightTheta += glm::radians(45.0f) * tDelta;
+	directLight.direction = vec3(cosf(directLightTheta), sinf(directLightTheta), 0.0f);
+
+	//
+	// Handle movement based on user input
+	//
 
 	float moveSpeed = 3.0f; // movement displacement per second
 	float rotateSpeed = 90.0f; // degrees rotation per second
