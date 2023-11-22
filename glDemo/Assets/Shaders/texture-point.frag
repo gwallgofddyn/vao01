@@ -46,4 +46,5 @@ void main(void) {
 	vec3 diffuseColour = surfaceColour.rgb * lightColour * l * a;
 
 	fragColour = vec4(diffuseColour, 1.0);
+	//fragColour = vec4(vec3(l, l, l), 1.0);
 }

@@ -272,9 +272,9 @@ int main() {
 // renderScene - function to render the current scene
 void renderScene()
 {
-	renderWithDirectionalLight();
+	//renderWithDirectionalLight();
 	//renderWithPointLight();
-	//renderWithMultipleLights();
+	renderWithMultipleLights();
 }
 
 // Demonstrate the use of a single directional light source
