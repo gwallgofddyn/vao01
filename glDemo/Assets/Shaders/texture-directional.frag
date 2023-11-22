@@ -31,5 +31,5 @@ void main(void) {
 	vec4 surfaceColour = texture2D(texture, inputFragment.texCoord);
 	vec3 diffuseColour = surfaceColour.rgb * lightColour * l;
 
-	fragColour = vec4(diffuseColour, surfaceColour.a);
+	fragColour = vec4(diffuseColour, 1.0);
 }

@@ -6,7 +6,7 @@
 uniform sampler2D texture;
 
 // Point light model
-uniform vec3 lightPos;
+uniform vec3 lightPosition;
 uniform vec3 lightColour;
 uniform vec3 lightAttenuation; // x=constant, y=linear, z=quadratic
 
@@ -24,19 +24,19 @@ layout (location=0) out vec4 fragColour;
 
 void main(void) {
 
-	vec3 surfacetoLight = lightPos - inputFragment.surfaceWorldPos;
+	vec3 surfaceToLightVec = lightPosition - inputFragment.surfaceWorldPos;
 
 	// calculate lambertian
-	vec3 surfaceToLightNormalised = normalize(surfacetoLight);
+	vec3 surfaceToLightNormalised = normalize(surfaceToLightVec);
 	vec3 N = normalize(inputFragment.surfaceNormal);
 	float l = dot(N, surfaceToLightNormalised);
 
 	// calculate attenuation
-	float d = length(surfacetoLight);
+	float d = length(surfaceToLightVec);
 
-	float kc = 1.0;//lightAttenuation.x;
-	float kl = 0.2;//lightAttenuation.y;
-	float kq = 0.01;//lightAttenuation.z;
+	float kc = lightAttenuation.x;
+	float kl = lightAttenuation.y;
+	float kq = lightAttenuation.z;
 
 	float a = 1.0 / ( kc + (kl * d) + (kq * d * d) );
 
@@ -45,5 +45,5 @@ void main(void) {
 
 	vec3 diffuseColour = surfaceColour.rgb * lightColour * l * a;
 
-	fragColour = vec4(diffuseColour, surfaceColour.a);
+	fragColour = vec4(diffuseColour, 1.0);
 }
