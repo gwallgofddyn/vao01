@@ -8,10 +8,15 @@ class AIMesh {
 
 	GLuint				meshVertexPosBuffer = 0;
 	GLuint				meshTexCoordBuffer = 0;
-	GLuint				meshNormalBuffer = 0;
+	
+	GLuint				meshNormalBuffer = 0; // surface basis z
+	GLuint				meshTangentBuffer = 0; // surface basis x (u aligned)
+	GLuint				meshBiTangentBuffer = 0; // surface basis y (v aligned)
+
 	GLuint				meshFaceIndexBuffer = 0;
 
 	GLuint				textureID = 0;
+	GLuint				normalMapID = 0;
 
 public:
 
@@ -19,6 +24,9 @@ public:
 
 	void addTexture(GLuint textureID);
 	void addTexture(std::string filename, FREE_IMAGE_FORMAT format);
+
+	void addNormalMap(GLuint normalMapID);
+	void addNormalMap(std::string filename, FREE_IMAGE_FORMAT format);
 
 	void preRender();
 	void render();

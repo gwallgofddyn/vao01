@@ -78,6 +78,7 @@ bool				rotateRightPressed;
 // Scene objects
 AIMesh*				groundMesh = nullptr;
 AIMesh*				creatureMesh = nullptr;
+AIMesh*				columnMesh = nullptr;
 Cylinder*			cylinderMesh = nullptr;
 
 
@@ -102,6 +103,15 @@ GLint				texPointLightShader_lightPosition;
 GLint				texPointLightShader_lightColour;
 GLint				texPointLightShader_lightAttenuation;
 
+// Normal mapped texture with Directional light
+GLuint				nMapDirLightShader;
+GLint				nMapDirLightShader_modelMatrix;
+GLint				nMapDirLightShader_viewMatrix;
+GLint				nMapDirLightShader_projMatrix;
+GLint				nMapDirLightShader_diffuseTexture;
+GLint				nMapDirLightShader_normalMapTexture;
+GLint				nMapDirLightShader_lightDirection;
+GLint				nMapDirLightShader_lightColour;
 
 // cylinder model
 vec3 cylinderPos = vec3(-2.0f, 2.0f, 0.0f);
@@ -119,6 +129,8 @@ DirectionalLight directLight = DirectionalLight(vec3(cosf(directLightTheta), sin
 PointLight lights[1] = {
 	PointLight(vec3(0.0f, 1.0f, 0.0), vec3(1.0f, 0.0f, 0.0f), vec3(1.0f, 0.1f, 0.001f))
 };
+
+bool rotateDirectionalLight = true;
 
 #pragma endregion
 
@@ -214,6 +226,12 @@ int main() {
 	if (creatureMesh) {
 		creatureMesh->addTexture(string("Assets\\beast\\beast_texture.bmp"), FIF_BMP);
 	}
+	
+	columnMesh = new AIMesh(string("Assets\\column\\Column.obj"));
+	if (columnMesh) {
+		columnMesh->addTexture(string("Assets\\column\\column_d.bmp"), FIF_BMP);
+		columnMesh->addNormalMap(string("Assets\\column\\column_n.bmp"), FIF_BMP);
+	}
 
 	cylinderMesh = new Cylinder(string("Assets\\cylinder\\cylinderT.obj"));
 	
@@ -221,6 +239,7 @@ int main() {
 	// Load shaders
 	texPointLightShader = setupShaders(string("Assets\\Shaders\\texture-point.vert"), string("Assets\\Shaders\\texture-point.frag"));
 	texDirLightShader = setupShaders(string("Assets\\Shaders\\texture-directional.vert"), string("Assets\\Shaders\\texture-directional.frag"));
+	nMapDirLightShader = setupShaders(string("Assets\\Shaders\\nmap-directional.vert"), string("Assets\\Shaders\\nmap-directional.frag"));
 
 	// Get uniform variable locations for setting values later during rendering
 	texDirLightShader_modelMatrix = glGetUniformLocation(texDirLightShader, "modelMatrix");
@@ -237,6 +256,14 @@ int main() {
 	texPointLightShader_lightPosition = glGetUniformLocation(texPointLightShader, "lightPosition");
 	texPointLightShader_lightColour = glGetUniformLocation(texPointLightShader, "lightColour");
 	texPointLightShader_lightAttenuation = glGetUniformLocation(texPointLightShader, "lightAttenuation");
+
+	nMapDirLightShader_modelMatrix = glGetUniformLocation(nMapDirLightShader, "modelMatrix");
+	nMapDirLightShader_viewMatrix = glGetUniformLocation(nMapDirLightShader, "viewMatrix");
+	nMapDirLightShader_projMatrix = glGetUniformLocation(nMapDirLightShader, "projMatrix");
+	nMapDirLightShader_diffuseTexture = glGetUniformLocation(nMapDirLightShader, "diffuseTexture");
+	nMapDirLightShader_normalMapTexture = glGetUniformLocation(nMapDirLightShader, "normalMapTexture");
+	nMapDirLightShader_lightDirection = glGetUniformLocation(nMapDirLightShader, "lightDirection");
+	nMapDirLightShader_lightColour = glGetUniformLocation(nMapDirLightShader, "lightColour");
 
 
 	//
@@ -272,9 +299,9 @@ int main() {
 // renderScene - function to render the current scene
 void renderScene()
 {
-	//renderWithDirectionalLight();
+	renderWithDirectionalLight();
 	//renderWithPointLight();
-	renderWithMultipleLights();
+	//renderWithMultipleLights();
 }
 
 // Demonstrate the use of a single directional light source
@@ -287,6 +314,8 @@ void renderWithDirectionalLight() {
 	mat4 cameraProjection = mainCamera->projectionTransform();
 	mat4 cameraView = mainCamera->viewTransform() * translate(identity<mat4>(), -beastPos);
 
+#pragma region Render opaque objects
+
 	// Plug-in texture-directional light shader and setup relevant uniform variables
 	// (keep this shader for all textured objects affected by the light source)
 	glUseProgram(texDirLightShader);
@@ -296,8 +325,6 @@ void renderWithDirectionalLight() {
 	glUniform1i(texDirLightShader_texture, 0); // set to point to texture unit 0 for AIMeshes
 	glUniform3fv(texDirLightShader_lightDirection, 1, (GLfloat*)&(directLight.direction));
 	glUniform3fv(texDirLightShader_lightColour, 1, (GLfloat*)&(directLight.colour));
-
-#pragma region Render opaque objects
 
 	if (groundMesh) {
 
@@ -319,6 +346,41 @@ void renderWithDirectionalLight() {
 		creatureMesh->preRender();
 		creatureMesh->render();
 		creatureMesh->postRender();
+	}
+
+	// Render normal textured column
+	if (columnMesh) {
+
+		mat4 modelTransform = glm::translate(identity<mat4>(), vec3(2.0f, 0.0f, 2.0f)) * glm::scale(identity<mat4>(), vec3(0.01f, 0.01f, 0.01f));
+
+		glUniformMatrix4fv(texDirLightShader_modelMatrix, 1, GL_FALSE, (GLfloat*)&modelTransform);
+
+		columnMesh->preRender();
+		columnMesh->render();
+		columnMesh->postRender();
+	}
+
+
+	// Plug in the normal map directional light shader
+	glUseProgram(nMapDirLightShader);
+
+	glUniformMatrix4fv(nMapDirLightShader_viewMatrix, 1, GL_FALSE, (GLfloat*)&cameraView);
+	glUniformMatrix4fv(nMapDirLightShader_projMatrix, 1, GL_FALSE, (GLfloat*)&cameraProjection);
+	glUniform1i(nMapDirLightShader_diffuseTexture, 0);
+	glUniform1i(nMapDirLightShader_normalMapTexture, 1);
+	glUniform3fv(nMapDirLightShader_lightDirection, 1, (GLfloat*)&(directLight.direction));
+	glUniform3fv(nMapDirLightShader_lightColour, 1, (GLfloat*)&(directLight.colour));
+
+
+	if (columnMesh) {
+
+		mat4 modelTransform = glm::translate(identity<mat4>(), vec3(0.0f, 0.0f, 2.0f)) * glm::scale(identity<mat4>(), vec3(0.01f, 0.01f, 0.01f));
+
+		glUniformMatrix4fv(nMapDirLightShader_modelMatrix, 1, GL_FALSE, (GLfloat*)&modelTransform);
+
+		columnMesh->preRender();
+		columnMesh->render();
+		columnMesh->postRender();
 	}
 
 #pragma endregion
@@ -592,8 +654,12 @@ void updateScene() {
 	cylinderMesh->update(tDelta);
 
 	// update main light source
-	directLightTheta += glm::radians(45.0f) * tDelta;
-	directLight.direction = vec3(cosf(directLightTheta), sinf(directLightTheta), 0.0f);
+	if (rotateDirectionalLight) {
+
+		directLightTheta += glm::radians(30.0f) * tDelta;
+		directLight.direction = vec3(cosf(directLightTheta), sinf(directLightTheta), 0.0f);
+	}
+	
 
 	//
 	// Handle movement based on user input
@@ -671,6 +737,10 @@ void keyboardHandler(GLFWwindow* window, int key, int scancode, int action, int 
 
 			case GLFW_KEY_D:
 				rotateRightPressed = true;
+				break;
+
+			case GLFW_KEY_SPACE:
+				rotateDirectionalLight = !rotateDirectionalLight;
 				break;
 
 			default:

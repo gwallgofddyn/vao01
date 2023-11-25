@@ -32,6 +32,16 @@ AIMesh::AIMesh(std::string filename, GLuint meshIndex) {
 	glBindBuffer(GL_ARRAY_BUFFER, meshNormalBuffer);
 	glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * sizeof(aiVector3D), mesh->mNormals, GL_STATIC_DRAW);
 
+	// Setup VBO for tangent and bi-tangent data
+	glGenBuffers(1, &meshTangentBuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, meshTangentBuffer);
+	glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * sizeof(aiVector3D), mesh->mTangents, GL_STATIC_DRAW);
+
+	glGenBuffers(1, &meshBiTangentBuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, meshBiTangentBuffer);
+	glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * sizeof(aiVector3D), mesh->mBitangents, GL_STATIC_DRAW);
+
+
 	if (mesh->mTextureCoords && mesh->mTextureCoords[0]) {
 
 		// Setup VBO for texture coordinate data (for now use uvw channel 0 only when accessing mesh->mTextureCoords)
@@ -75,6 +85,18 @@ void AIMesh::addTexture(std::string filename, FREE_IMAGE_FORMAT format) {
 	textureID = loadTexture(filename, format);
 }
 
+void AIMesh::addNormalMap(GLuint normalMapID) {
+
+	this->normalMapID = normalMapID;
+}
+
+void AIMesh::addNormalMap(std::string filename, FREE_IMAGE_FORMAT format) {
+
+	normalMapID = loadTexture(filename, format);
+}
+
+
+// Rendering functions
 
 void AIMesh::preRender() {
 
@@ -87,6 +109,14 @@ void AIMesh::preRender() {
 	glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, (const GLvoid*)0);
 	glEnableVertexAttribArray(3);
 
+	glBindBuffer(GL_ARRAY_BUFFER, meshTangentBuffer);
+	glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 0, (const GLvoid*)0);
+	glEnableVertexAttribArray(4);
+
+	glBindBuffer(GL_ARRAY_BUFFER, meshBiTangentBuffer);
+	glVertexAttribPointer(5, 3, GL_FLOAT, GL_FALSE, 0, (const GLvoid*)0);
+	glEnableVertexAttribArray(5);
+
 	if (meshTexCoordBuffer != 0) {
 
 		glBindBuffer(GL_ARRAY_BUFFER, meshTexCoordBuffer);
@@ -94,8 +124,21 @@ void AIMesh::preRender() {
 		glEnableVertexAttribArray(2);
 
 		if (textureID != 0) {
+			
 			glEnable(GL_TEXTURE_2D);
+			
+			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, textureID);
+
+			// check if normal map added
+			if (normalMapID != 0) {
+
+				glActiveTexture(GL_TEXTURE1);
+				glBindTexture(GL_TEXTURE_2D, normalMapID);
+
+				// Restore default
+				glActiveTexture(GL_TEXTURE0);
+			}
 		}
 	}
 
@@ -114,14 +157,28 @@ void AIMesh::postRender() {
 
 	glDisableVertexAttribArray(0);
 	glDisableVertexAttribArray(3);
+	glDisableVertexAttribArray(4);
+	glDisableVertexAttribArray(5);
 
 	if (meshTexCoordBuffer != 0) {
 
 		glDisableVertexAttribArray(2);
 
 		if (textureID != 0) {
+
 			glDisable(GL_TEXTURE_2D);
+
+			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, 0);
+
+			if (normalMapID != 0) {
+
+				glActiveTexture(GL_TEXTURE1);
+				glBindTexture(GL_TEXTURE_2D, 0);
+			}
+
+			// Restore default
+			glActiveTexture(GL_TEXTURE0);
 		}
 	}
 
