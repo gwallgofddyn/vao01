@@ -103,7 +103,9 @@ GLint				texPointLightShader_lightPosition;
 GLint				texPointLightShader_lightColour;
 GLint				texPointLightShader_lightAttenuation;
 
-// Normal mapped texture with Directional light
+//  *** normal mapping *** Normal mapped texture with Directional light
+// This is the same as the texture direct light shader above, but with the addtional uniform variable
+// to set the normal map sampler2D variable in the fragment shader.
 GLuint				nMapDirLightShader;
 GLint				nMapDirLightShader_modelMatrix;
 GLint				nMapDirLightShader_viewMatrix;
@@ -305,6 +307,8 @@ void renderScene()
 }
 
 // Demonstrate the use of a single directional light source
+//  *** normal mapping ***  - since we're demonstrating the use of normal mapping with a directional light,
+// the normal mapped objects are rendered here also!
 void renderWithDirectionalLight() {
 
 	// Clear the rendering window
@@ -348,7 +352,7 @@ void renderWithDirectionalLight() {
 		creatureMesh->postRender();
 	}
 
-	// Render normal textured column
+	// Render diffuse textured column (to compare with normal mapped version rendered below)...
 	if (columnMesh) {
 
 		mat4 modelTransform = glm::translate(identity<mat4>(), vec3(2.0f, 0.0f, 2.0f)) * glm::scale(identity<mat4>(), vec3(0.01f, 0.01f, 0.01f));
@@ -361,9 +365,12 @@ void renderWithDirectionalLight() {
 	}
 
 
+	
+	//  *** normal mapping ***  Render the normal mapped column
 	// Plug in the normal map directional light shader
 	glUseProgram(nMapDirLightShader);
 
+	// Setup uniforms
 	glUniformMatrix4fv(nMapDirLightShader_viewMatrix, 1, GL_FALSE, (GLfloat*)&cameraView);
 	glUniformMatrix4fv(nMapDirLightShader_projMatrix, 1, GL_FALSE, (GLfloat*)&cameraProjection);
 	glUniform1i(nMapDirLightShader_diffuseTexture, 0);
@@ -371,7 +378,7 @@ void renderWithDirectionalLight() {
 	glUniform3fv(nMapDirLightShader_lightDirection, 1, (GLfloat*)&(directLight.direction));
 	glUniform3fv(nMapDirLightShader_lightColour, 1, (GLfloat*)&(directLight.colour));
 
-
+	// Render columnMesh (follows same pattern / code structure as other objects)
 	if (columnMesh) {
 
 		mat4 modelTransform = glm::translate(identity<mat4>(), vec3(0.0f, 0.0f, 2.0f)) * glm::scale(identity<mat4>(), vec3(0.01f, 0.01f, 0.01f));

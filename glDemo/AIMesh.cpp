@@ -32,7 +32,7 @@ AIMesh::AIMesh(std::string filename, GLuint meshIndex) {
 	glBindBuffer(GL_ARRAY_BUFFER, meshNormalBuffer);
 	glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * sizeof(aiVector3D), mesh->mNormals, GL_STATIC_DRAW);
 
-	// Setup VBO for tangent and bi-tangent data
+	// *** normal mapping *** Setup VBO for tangent and bi-tangent data
 	glGenBuffers(1, &meshTangentBuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, meshTangentBuffer);
 	glBufferData(GL_ARRAY_BUFFER, mesh->mNumVertices * sizeof(aiVector3D), mesh->mTangents, GL_STATIC_DRAW);
@@ -85,6 +85,7 @@ void AIMesh::addTexture(std::string filename, FREE_IMAGE_FORMAT format) {
 	textureID = loadTexture(filename, format);
 }
 
+// ***normal mapping*** - helper functions at add normal map image to the object
 void AIMesh::addNormalMap(GLuint normalMapID) {
 
 	this->normalMapID = normalMapID;
@@ -109,6 +110,8 @@ void AIMesh::preRender() {
 	glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, (const GLvoid*)0);
 	glEnableVertexAttribArray(3);
 
+	//  *** normal mapping *** Bind tangent and bi-tangent VBOs
+	// As noted in the lecture slides, we could just use one of these and calculate the other in the shader
 	glBindBuffer(GL_ARRAY_BUFFER, meshTangentBuffer);
 	glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 0, (const GLvoid*)0);
 	glEnableVertexAttribArray(4);
@@ -130,7 +133,7 @@ void AIMesh::preRender() {
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, textureID);
 
-			// check if normal map added
+			//  *** normal mapping ***  check if normal map added - if so bind to texture unit 1 (as noted in  slides)
 			if (normalMapID != 0) {
 
 				glActiveTexture(GL_TEXTURE1);
