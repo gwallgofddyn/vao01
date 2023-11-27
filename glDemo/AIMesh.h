@@ -6,6 +6,8 @@ class AIMesh {
 
 	GLuint				numFaces = 0;
 
+	GLuint				vao = 0;
+
 	GLuint				meshVertexPosBuffer = 0;
 	GLuint				meshTexCoordBuffer = 0;
 	
