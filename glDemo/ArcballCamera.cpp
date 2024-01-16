@@ -39,7 +39,7 @@ ArcballCamera::ArcballCamera() {
 	phi = 0.0f;
 	radius = 15.0f;
 
-	fovY = 55.0f;
+	fovY = 15.0f;
 	aspect = 1.0f;
 	nearPlane = 0.1f;
 	farPlane = 500.0f;

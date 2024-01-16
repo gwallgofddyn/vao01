@@ -20,7 +20,7 @@ struct DirectionalLight {
 	DirectionalLight() {
 
 		direction = vec3(0.0f, 1.0f, 0.0f); // default to point upwards
-		colour = vec3(1.0f, 1.0f, 1.0f);
+		colour = vec3(4.0f, 0.0f, 0.0f);
 	}
 
 	DirectionalLight(vec3 direction, vec3 colour = vec3(1.0f, 1.0f, 1.0f)) {
@@ -39,7 +39,7 @@ struct PointLight {
 	PointLight() {
 
 		pos = vec3(0.0f, 0.0f, 0.0f);
-		colour = vec3(1.0f, 1.0f, 1.0f);
+		colour = vec3(1.0f, 1.0f, 0.0f);
 		attenuation = vec3(1.0f, 1.0f, 1.0f);
 	}
 
@@ -79,6 +79,12 @@ bool				rotateRightPressed;
 AIMesh*				groundMesh = nullptr;
 AIMesh*				creatureMesh = nullptr;
 AIMesh*				columnMesh = nullptr;
+
+AIMesh*             moonhutMesh = nullptr;
+AIMesh*             moonmanMesh = nullptr;
+AIMesh*             lampMesh = nullptr;
+AIMesh*             satMesh = nullptr;
+
 Cylinder*			cylinderMesh = nullptr;
 
 
@@ -116,23 +122,37 @@ GLint				nMapDirLightShader_lightDirection;
 GLint				nMapDirLightShader_lightColour;
 
 // cylinder model
-vec3 cylinderPos = vec3(-2.0f, 2.0f, 0.0f);
+vec3 cylinderPos = vec3(-5.0f, 0.0f, 0.0f);
 
 // beast model
 vec3 beastPos = vec3(2.0f, 0.0f, 0.0f);
 float beastRotation = 0.0f;
 
+//moonhut model
+vec3 moonhutPos = vec3(1.0f, 1.0f, 0.0f);
+
+//moonman model
+vec3 moonmanPos = vec3(1.0f, 1.0f, 5.0f);
+
+//lamp model
+vec3 lampPos =  vec3(10.0f, 1.0f, 0.0f);
+
+//sat model
+vec3 satPos = vec3(1.0f, 1.0f, 5.0f);
+
 
 // Directional light example (declared as a single instance)
-float directLightTheta = 0.0f;
+float directLightTheta = -30.0f;
 DirectionalLight directLight = DirectionalLight(vec3(cosf(directLightTheta), sinf(directLightTheta), 0.0f));
 
 // Setup point light example light (use array to make adding other lights easier later)
 PointLight lights[1] = {
-	PointLight(vec3(0.0f, 1.0f, 0.0), vec3(1.0f, 0.0f, 0.0f), vec3(1.0f, 0.1f, 0.001f))
-};
+	PointLight(vec3(2.0f, 2.0f, 7.0f), 
+	vec3(0.0f, 2.0f, -7.0f),
+	vec3(1.0f, 1.0f, 1.0f) )
+		};
 
-bool rotateDirectionalLight = true;
+bool rotateDirectionalLight = false;
 
 #pragma endregion
 
@@ -217,23 +237,39 @@ int main() {
 	//
 	// Setup Textures, VBOs and other scene objects
 	//
-	mainCamera = new ArcballCamera(-33.0f, 45.0f, 8.0f, 55.0f, (float)windowWidth/(float)windowHeight, 0.1f, 500.0f);
+	mainCamera = new ArcballCamera(-45.0f, 45.0f, 40.0f, 40.0f, (float)windowWidth/(float)windowHeight, 0.1f, 500.0f);
+
+	
 	
 	groundMesh = new AIMesh(string("Assets\\ground-surface\\surface01.obj"));
 	if (groundMesh) {
-		groundMesh->addTexture("Assets\\ground-surface\\lunar-surface01.png", FIF_PNG);
+		groundMesh->addTexture("Assets\\ground-surface\\stone.png", FIF_PNG);
 	}
 
-	creatureMesh = new AIMesh(string("Assets\\beast\\beast.obj"));
-	if (creatureMesh) {
-		creatureMesh->addTexture(string("Assets\\beast\\beast_texture.bmp"), FIF_BMP);
+	moonhutMesh = new AIMesh(string("Assets\\moonhut\\moonhut.obj"));
+	if (moonhutMesh) {
+		moonhutMesh->addTexture(string("Assets\\moonhut\\moonhut_tex.bmp"), FIF_BMP);
+
 	}
-	
-	columnMesh = new AIMesh(string("Assets\\column\\Column.obj"));
-	if (columnMesh) {
-		columnMesh->addTexture(string("Assets\\column\\column_d.bmp"), FIF_BMP);
-		columnMesh->addNormalMap(string("Assets\\column\\column_n.bmp"), FIF_BMP);
+	moonmanMesh = new AIMesh(string("Assets\\moonman\\moonman.obj"));
+	if (moonhutMesh) {
+		moonmanMesh->addTexture(string("Assets\\moonman\\moonman_tex.PNG"), FIF_PNG);
+
 	}
+
+	lampMesh = new AIMesh(string("Assets\\lamp\\lamp.obj"));
+	if (lampMesh) {
+		lampMesh->addTexture(string("Assets\\lamp\\lamp_tex.PNG"), FIF_PNG);
+
+	}
+
+	satMesh = new AIMesh(string("Assets\\sat\\sat.obj"));
+	if (satMesh) {
+		satMesh->addTexture(string("Assets\\lamp\\lamp_tex.PNG"), FIF_PNG);
+
+	}
+
+
 
 	cylinderMesh = new Cylinder(string("Assets\\cylinder\\cylinderT.obj"));
 	
@@ -301,9 +337,9 @@ int main() {
 // renderScene - function to render the current scene
 void renderScene()
 {
-	renderWithDirectionalLight();
+	//renderWithDirectionalLight();
 	//renderWithPointLight();
-	//renderWithMultipleLights();
+	renderWithMultipleLights();
 }
 
 // Demonstrate the use of a single directional light source
@@ -322,6 +358,7 @@ void renderWithDirectionalLight() {
 
 	// Plug-in texture-directional light shader and setup relevant uniform variables
 	// (keep this shader for all textured objects affected by the light source)
+
 	glUseProgram(texDirLightShader);
 
 	glUniformMatrix4fv(texDirLightShader_viewMatrix, 1, GL_FALSE, (GLfloat*)&cameraView);
@@ -329,6 +366,15 @@ void renderWithDirectionalLight() {
 	glUniform1i(texDirLightShader_texture, 0); // set to point to texture unit 0 for AIMeshes
 	glUniform3fv(texDirLightShader_lightDirection, 1, (GLfloat*)&(directLight.direction));
 	glUniform3fv(texDirLightShader_lightColour, 1, (GLfloat*)&(directLight.colour));
+
+//	glUseProgram(texPointLightShader);
+
+//	glUniformMatrix4fv(texPointLightShader_viewMatrix, 1, GL_FALSE, (GLfloat*)&cameraView);
+//	glUniformMatrix4fv(texPointLightShader_projMatrix, 1, GL_FALSE, (GLfloat*)&cameraProjection);
+//	glUniform1i(texPointLightShader_texture, 0); // set to point to texture unit 0 for AIMeshes
+//	glUniform3fv(texPointLightShader_lightPosition, 1, (GLfloat*)&(lights[0].pos));
+//	glUniform3fv(texPointLightShader_lightColour, 1, (GLfloat*)&(lights[0].colour));
+//	glUniform3fv(texPointLightShader_lightAttenuation, 1, (GLfloat*)&(lights[0].attenuation));
 
 	if (groundMesh) {
 
@@ -340,54 +386,54 @@ void renderWithDirectionalLight() {
 		groundMesh->render();
 	}
 
-	if (creatureMesh) {
+	if (moonhutMesh) {
 
-		mat4 modelTransform = glm::translate(identity<mat4>(), beastPos) * eulerAngleY<float>(glm::radians<float>(beastRotation));
-
-		glUniformMatrix4fv(texDirLightShader_modelMatrix, 1, GL_FALSE, (GLfloat*)&modelTransform);
-
-		creatureMesh->setupTextures();
-		creatureMesh->render();
-	}
-
-	// Render diffuse textured column (to compare with normal mapped version rendered below)...
-	if (columnMesh) {
-
-		mat4 modelTransform = glm::translate(identity<mat4>(), vec3(2.0f, 0.0f, 2.0f)) * glm::scale(identity<mat4>(), vec3(0.01f, 0.01f, 0.01f));
+		mat4 modelTransform = glm::translate(identity<mat4>(), vec3(-2.0f, 0.0f, 0.0f)) * glm::scale(identity<mat4>(), vec3(1.0f, 1.0f, 1.0f));
 
 		glUniformMatrix4fv(texDirLightShader_modelMatrix, 1, GL_FALSE, (GLfloat*)&modelTransform);
 
-		columnMesh->setupTextures();
-		columnMesh->render();
+		moonhutMesh->setupTextures();
+		moonhutMesh->render();
 	}
 
+	if (moonmanMesh) {
 
-	
-	//  *** normal mapping ***  Render the normal mapped column
-	// Plug in the normal map directional light shader
-	glUseProgram(nMapDirLightShader);
+		mat4 modelTransform = glm::translate(identity<mat4>(), vec3(5.0f, 0.0f, 0.0f)) * glm::scale(identity<mat4>(), vec3(0.05f, 0.05f, 0.05f));
 
-	// Setup uniforms
-	glUniformMatrix4fv(nMapDirLightShader_viewMatrix, 1, GL_FALSE, (GLfloat*)&cameraView);
-	glUniformMatrix4fv(nMapDirLightShader_projMatrix, 1, GL_FALSE, (GLfloat*)&cameraProjection);
-	glUniform1i(nMapDirLightShader_diffuseTexture, 0);
-	glUniform1i(nMapDirLightShader_normalMapTexture, 1);
-	glUniform3fv(nMapDirLightShader_lightDirection, 1, (GLfloat*)&(directLight.direction));
-	glUniform3fv(nMapDirLightShader_lightColour, 1, (GLfloat*)&(directLight.colour));
+		glUniformMatrix4fv(texDirLightShader_modelMatrix, 1, GL_FALSE, (GLfloat*)&modelTransform);
 
-	// Render columnMesh (follows same pattern / code structure as other objects)
-	if (columnMesh) {
-
-		mat4 modelTransform = glm::translate(identity<mat4>(), vec3(0.0f, 0.0f, 2.0f)) * glm::scale(identity<mat4>(), vec3(0.01f, 0.01f, 0.01f));
-
-		glUniformMatrix4fv(nMapDirLightShader_modelMatrix, 1, GL_FALSE, (GLfloat*)&modelTransform);
-
-		columnMesh->setupTextures();
-		columnMesh->render();
+		moonmanMesh->setupTextures();
+		moonmanMesh->render();
 	}
 
 #pragma endregion
 
+	// Enable additive blending for ***subsequent*** light sources!!!
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_ONE, GL_ONE);
+
+	
+
+#pragma region Render all opaque objects with point light
+
+	glUseProgram(texPointLightShader);
+
+	glUniformMatrix4fv(texPointLightShader_viewMatrix, 1, GL_FALSE, (GLfloat*)&cameraView);
+	glUniformMatrix4fv(texPointLightShader_projMatrix, 1, GL_FALSE, (GLfloat*)&cameraProjection);
+	glUniform1i(texPointLightShader_texture, 0); // set to point to texture unit 0 for AIMeshes
+	glUniform3fv(texPointLightShader_lightPosition, 1, (GLfloat*)&(lights[0].pos));
+	glUniform3fv(texPointLightShader_lightColour, 1, (GLfloat*)&(lights[0].colour));
+	glUniform3fv(texPointLightShader_lightAttenuation, 1, (GLfloat*)&(lights[0].attenuation));
+
+if (moonhutMesh) {
+
+		mat4 modelTransform = glm::translate(identity<mat4>(), vec3(-2.0f, 0.0f, 0.0f)) * glm::scale(identity<mat4>(), vec3(1.0f, 1.0f, 1.0f));
+
+		glUniformMatrix4fv(texDirLightShader_modelMatrix, 1, GL_FALSE, (GLfloat*)&modelTransform);
+
+		moonhutMesh->setupTextures();
+		moonhutMesh->render();
+	}
 
 #pragma region Render transparant objects
 
@@ -396,14 +442,28 @@ void renderWithDirectionalLight() {
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	if (cylinderMesh) {
+	
+	if (cylinderMesh)
+	  {
 
 		mat4 T = cameraProjection * cameraView * glm::translate(identity<mat4>(), cylinderPos);
 
 		cylinderMesh->setupTextures();
-		cylinderMesh->render(T);
+       cylinderMesh->render(T);
 	}
 
+	//if (moonhutMesh) {
+
+		// mat4 modelTransform = glm::translate(identity<mat4>(), vec3(0.1f, 0.0f, 0.0f)) * glm::scale(identity<mat4>(), vec3(0.1f, 0.1f, 0.1f));
+		//mat4 modelTransform = cameraProjection * cameraView * glm::scale(identity<mat4>(), moonhutPos);
+
+		// glUniformMatrix4fv(texDirLightShader_modelMatrix, 1, GL_FALSE, (GLfloat*)&modelTransform);
+
+	//	moonhutMesh->setupTextures();
+	//	moonhutMesh->render();
+
+
+//	}
 	glDisable(GL_BLEND);
 
 #pragma endregion
@@ -421,10 +481,18 @@ void renderWithDirectionalLight() {
 	mat4 cameraT = cameraProjection * cameraView;
 	glLoadMatrixf((GLfloat*)&cameraT);
 	glEnable(GL_POINT_SMOOTH);
-	glPointSize(10.0f);
+	glPointSize(8.0f);
 	glBegin(GL_POINTS);
-	glColor3f(directLight.colour.r, directLight.colour.g, directLight.colour.b);
-	glVertex3f(directLight.direction.x * 10.0f, directLight.direction.y * 10.0f, directLight.direction.z * 10.0f);
+
+	//glColor3f(directLight.colour.r, directLight.colour.g, directLight.colour.b);
+//	glVertex3f(directLight.direction.x * 1.0f, directLight.direction.y * 1.0f, directLight.direction.z * 1.0f);
+
+	glColor3f(lights[0].colour.r, lights[0].colour.g, lights[1].colour.b);
+	glVertex3f(lights[0].pos.x, lights[0].pos.y, lights[0].pos.z);
+
+	//glColor3f(lights[0].colour.r, lights[0].colour.g, lights[0].colour.b);
+	//glVertex3f(lights[1].pos.x, lights[1].pos.y, lights[1].pos.z);
+
 	glEnd();
 }
 
@@ -452,6 +520,16 @@ void renderWithPointLight() {
 	
 #pragma region Render opaque objects
 
+	if (moonhutMesh) {
+
+		mat4 modelTransform = glm::translate(identity<mat4>(), vec3(0.01f, 0.0f, 0.0f)) * glm::scale(identity<mat4>(), vec3(0.1f, 0.1f, 0.1f));
+
+		glUniformMatrix4fv(texDirLightShader_modelMatrix, 1, GL_FALSE, (GLfloat*)&modelTransform);
+
+		moonhutMesh->setupTextures();
+		moonhutMesh->render();
+	}
+
 	if (groundMesh) {
 
 		mat4 modelTransform = glm::scale(identity<mat4>(), vec3(10.0f, 1.0f, 10.0f));
@@ -462,15 +540,11 @@ void renderWithPointLight() {
 		groundMesh->render();
 	}
 
-	if (creatureMesh) {
+	
 
-		mat4 modelTransform = glm::translate(identity<mat4>(), beastPos) * eulerAngleY<float>(glm::radians<float>(beastRotation));
+	
 
-		glUniformMatrix4fv(texPointLightShader_modelMatrix, 1, GL_FALSE, (GLfloat*)&modelTransform);
 
-		creatureMesh->setupTextures();
-		creatureMesh->render();
-	}
 
 #pragma endregion
 
@@ -542,15 +616,47 @@ void renderWithMultipleLights() {
 		groundMesh->render();
 	}
 
-	if (creatureMesh) {
+	if (moonhutMesh) {
 
-		mat4 modelTransform = glm::translate(identity<mat4>(), beastPos) * eulerAngleY<float>(glm::radians<float>(beastRotation));
+		mat4 modelTransform = glm::translate(identity<mat4>(), vec3(-0.2f, 0.0f, 0.0f)) * glm::scale(identity<mat4>(), vec3(1.0f, 1.0f, 1.0f));
 
 		glUniformMatrix4fv(texDirLightShader_modelMatrix, 1, GL_FALSE, (GLfloat*)&modelTransform);
 
-		creatureMesh->setupTextures();
-		creatureMesh->render();
+		moonhutMesh->setupTextures();
+		moonhutMesh->render();
 	}
+
+	if (lampMesh) {
+
+		mat4 modelTransform = glm::translate(identity<mat4>(), vec3(2.8f, 0.0f, 7.0f)) * glm::scale(identity<mat4>(), vec3(0.11f, 0.11f, 0.11f));
+
+		glUniformMatrix4fv(texDirLightShader_modelMatrix, 1, GL_FALSE, (GLfloat*)&modelTransform);
+
+		lampMesh->setupTextures();
+		lampMesh->render();
+	}
+	
+
+	if (moonmanMesh) {
+
+		mat4 modelTransform = glm::translate(identity<mat4>(), vec3(5.0f, 0.0f, 7.0f)) * glm::scale(identity<mat4>(), vec3(0.05f, 0.05f, 0.05f));
+
+		glUniformMatrix4fv(texDirLightShader_modelMatrix, 1, GL_FALSE, (GLfloat*)&modelTransform);
+
+		moonmanMesh->setupTextures();
+		moonmanMesh->render();
+	}
+
+	if (satMesh) {
+
+		mat4 modelTransform = glm::translate(identity<mat4>(), vec3(2.8f, -0.1f, -7.0f)) * glm::scale(identity<mat4>(), vec3(0.07f, 0.07f, 0.07f));
+
+		glUniformMatrix4fv(texDirLightShader_modelMatrix, 1, GL_FALSE, (GLfloat*)&modelTransform);
+
+		satMesh->setupTextures();
+		satMesh->render();
+	}
+
 
 #pragma endregion
 
@@ -583,33 +689,48 @@ void renderWithMultipleLights() {
 		groundMesh->render();
 	}
 
-	if (creatureMesh) {
 
-		mat4 modelTransform = glm::translate(identity<mat4>(), beastPos) * eulerAngleY<float>(glm::radians<float>(beastRotation));
 
-		glUniformMatrix4fv(texPointLightShader_modelMatrix, 1, GL_FALSE, (GLfloat*)&modelTransform);
+	if (moonhutMesh) {
 
-		creatureMesh->setupTextures();
-		creatureMesh->render();
+		mat4 modelTransform = glm::translate(identity<mat4>(), vec3(-0.2f, 0.0f, 0.0f)) * glm::scale(identity<mat4>(), vec3(1.0f, 1.0f, 1.0f));
+		;
+
+		glUniformMatrix4fv(texDirLightShader_modelMatrix, 1, GL_FALSE, (GLfloat*)&modelTransform);
+
+		moonhutMesh->setupTextures();
+		moonhutMesh->render();
 	}
-
+	
+	
 #pragma endregion
 
 
 #pragma region Render transparant objects
 
 	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	if (cylinderMesh) {
+//	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-		mat4 T = cameraProjection * cameraView * glm::translate(identity<mat4>(), cylinderPos);
+//	if (cylinderMesh) {
 
-		cylinderMesh->setupTextures();
-		cylinderMesh->render(T);
-	}
+//		mat4 T = cameraProjection * cameraView * glm::translate(identity<mat4>(), cylinderPos);
 
-	glDisable(GL_BLEND);
+//		cylinderMesh->setupTextures();
+//		cylinderMesh->render(T);
+//	}
+
+//	if (satMesh) {
+
+//		mat4 modelTransform = glm::translate(identity<mat4>(), vec3(2.8f, -0.1f, -7.0f)) * glm::scale(identity<mat4>(), vec3(0.07f, 0.07f, 0.07f));
+
+//		glUniformMatrix4fv(texDirLightShader_modelMatrix, 1, GL_FALSE, (GLfloat*)&modelTransform);
+
+//		satMesh->setupTextures();
+//		satMesh->render();
+//	}
+
+   glDisable(GL_BLEND);
 
 #pragma endregion
 
@@ -626,12 +747,12 @@ void renderWithMultipleLights() {
 	mat4 cameraT = cameraProjection * cameraView;
 	glLoadMatrixf((GLfloat*)&cameraT);
 	glEnable(GL_POINT_SMOOTH);
-	glPointSize(10.0f);
+	glPointSize(8.0f);
 	
 	glBegin(GL_POINTS);
 
 	glColor3f(directLight.colour.r, directLight.colour.g, directLight.colour.b);
-	glVertex3f(directLight.direction.x * 10.0f, directLight.direction.y * 10.0f, directLight.direction.z * 10.0f);
+	glVertex3f(directLight.direction.x * 0.0f, directLight.direction.y * 1.0f, directLight.direction.z * 0.0f);
 
 	glColor3f(lights[0].colour.r, lights[0].colour.g, lights[0].colour.b);
 	glVertex3f(lights[0].pos.x, lights[0].pos.y, lights[0].pos.z);
@@ -656,7 +777,7 @@ void updateScene() {
 	// update main light source
 	if (rotateDirectionalLight) {
 
-		directLightTheta += glm::radians(30.0f) * tDelta;
+		directLightTheta += glm::radians(90.0f) * tDelta;
 		directLight.direction = vec3(cosf(directLightTheta), sinf(directLightTheta), 0.0f);
 	}
 	
