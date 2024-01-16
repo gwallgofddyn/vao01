@@ -133,6 +133,7 @@ vec3 moonhutPos = vec3(1.0f, 1.0f, 0.0f);
 
 //moonman model
 vec3 moonmanPos = vec3(1.0f, 1.0f, 5.0f);
+float moonmanRotation = 0.0f;
 
 //lamp model
 vec3 lampPos =  vec3(10.0f, 1.0f, 0.0f);
@@ -593,7 +594,7 @@ void renderWithMultipleLights() {
 
 	// Get camera matrices
 	mat4 cameraProjection = mainCamera->projectionTransform();
-	mat4 cameraView = mainCamera->viewTransform() * translate(identity<mat4>(), -beastPos);
+	mat4 cameraView = mainCamera->viewTransform() * translate(identity<mat4>(), -moonmanPos);
 
 
 #pragma region Render all opaque objects with directional light
@@ -639,7 +640,9 @@ void renderWithMultipleLights() {
 
 	if (moonmanMesh) {
 
-		mat4 modelTransform = glm::translate(identity<mat4>(), vec3(5.0f, 0.0f, 7.0f)) * glm::scale(identity<mat4>(), vec3(0.05f, 0.05f, 0.05f));
+		//mat4 modelTransform = glm::translate(identity<mat4>(), vec3(5.0f, 0.0f, 7.0f)) * glm::scale(identity<mat4>(), vec3(0.05f, 0.05f, 0.05f));
+
+		mat4 modelTransform = glm::translate(identity<mat4>(), moonmanPos) * eulerAngleY<float>(glm::radians<float>(moonmanRotation));
 
 		glUniformMatrix4fv(texDirLightShader_modelMatrix, 1, GL_FALSE, (GLfloat*)&modelTransform);
 
@@ -772,7 +775,7 @@ void updateScene() {
 		tDelta = (float)gameClock->gameTimeDelta();
 	}
 
-	cylinderMesh->update(tDelta);
+	//cylinderMesh->update(tDelta);
 
 	// update main light source
 	if (rotateDirectionalLight) {
@@ -791,24 +794,25 @@ void updateScene() {
 
 	if (forwardPressed) {
 
-		mat4 R = eulerAngleY<float>(glm::radians<float>(beastRotation)); // local coord space / basis vectors - move along z
+		mat4 R = eulerAngleY<float>(glm::radians<float>(moonmanRotation)); // local coord space / basis vectors - move along z
 		float dPos = moveSpeed * tDelta; // calc movement based on time elapsed
-		beastPos += vec3(R[2].x * dPos, R[2].y * dPos, R[2].z * dPos); // add displacement to position vector
+		moonmanPos += vec3(R[2].x * dPos, R[2].y * dPos, R[2].z * dPos); // add displacement to position vector
+		
 	}
 	else if (backPressed) {
 
-		mat4 R = eulerAngleY<float>(glm::radians<float>(beastRotation)); // local coord space / basis vectors - move along z
+		mat4 R = eulerAngleY<float>(glm::radians<float>(moonmanRotation)); // local coord space / basis vectors - move along z
 		float dPos = -moveSpeed * tDelta; // calc movement based on time elapsed
-		beastPos += vec3(R[2].x * dPos, R[2].y * dPos, R[2].z * dPos); // add displacement to position vector
+		moonmanPos += vec3(R[2].x * dPos, R[2].y * dPos, R[2].z * dPos); // add displacement to position vector
 	}
 
 	if (rotateLeftPressed) {
 
-		beastRotation += rotateSpeed * tDelta;
+		moonmanRotation += rotateSpeed * tDelta;
 	}
 	else if (rotateRightPressed) {
 
-		beastRotation -= rotateSpeed * tDelta;
+		moonmanRotation -= rotateSpeed * tDelta;
 	}
 
 }
