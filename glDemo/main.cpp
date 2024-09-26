@@ -81,9 +81,10 @@ AIMesh*				creatureMesh = nullptr;
 AIMesh*				columnMesh = nullptr;
 
 AIMesh*             moonhutMesh = nullptr;
-AIMesh*             moonmanMesh = nullptr;
+AIMesh*             moonmanMesh = nullptr; //player
 AIMesh*             lampMesh = nullptr;
 AIMesh*             satMesh = nullptr;
+AIMesh*             npcMesh = nullptr;
 
 Cylinder*			cylinderMesh = nullptr;
 
@@ -132,7 +133,7 @@ float beastRotation = 0.0f;
 vec3 moonhutPos = vec3(1.0f, 1.0f, 0.0f);
 
 //moonman model
-vec3 moonmanPos = vec3(1.0f, 1.0f, 5.0f);
+vec3 moonmanPos = vec3(-4.0f, 0.2f, -5.0f);
 float moonmanRotation = 0.0f;
 
 //lamp model
@@ -140,6 +141,10 @@ vec3 lampPos =  vec3(10.0f, 1.0f, 0.0f);
 
 //sat model
 vec3 satPos = vec3(1.0f, 1.0f, 5.0f);
+
+//npc model
+vec3 npcPos = vec3(4.0f, 0.2f, 5.0f);
+float npcRotation = 5.0f;
 
 
 // Directional light example (declared as a single instance)
@@ -221,6 +226,14 @@ int main() {
 #pragma endregion
 
 
+
+
+
+
+
+
+
+
 	// Initialise scene - geometry and shaders etc
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // setup background colour to be black
 	glClearDepth(1.0f);
@@ -270,7 +283,11 @@ int main() {
 
 	}
 
+	npcMesh = new AIMesh(string("Assets\\moonman\\moonman.obj"));
+	if (npcMesh) {
+		npcMesh->addTexture(string("Assets\\moonman\\moonman_tex1.PNG"), FIF_PNG);
 
+	}
 
 	cylinderMesh = new Cylinder(string("Assets\\cylinder\\cylinderT.obj"));
 	
@@ -660,7 +677,18 @@ void renderWithMultipleLights() {
 		satMesh->render();
 	}
 
+	if (npcMesh) {
 
+		//mat4 modelTransform = glm::translate(identity<mat4>(), vec3(5.0f, 0.0f, 7.0f)) * glm::scale(identity<mat4>(), vec3(0.05f, 0.05f, 0.05f));
+
+		mat4 modelTransform = glm::translate(identity<mat4>(), npcPos) * eulerAngleY<float>(glm::radians<float>(npcRotation));
+
+		glUniformMatrix4fv(texDirLightShader_modelMatrix, 1, GL_FALSE, (GLfloat*)&modelTransform);
+
+		npcMesh->setupTextures();
+		npcMesh->render();
+
+	}
 #pragma endregion
 
 
@@ -713,7 +741,7 @@ void renderWithMultipleLights() {
 
 	glEnable(GL_BLEND);
 
-//	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 //	if (cylinderMesh) {
 
@@ -726,9 +754,9 @@ void renderWithMultipleLights() {
 //	if (satMesh) {
 
 //		mat4 modelTransform = glm::translate(identity<mat4>(), vec3(2.8f, -0.1f, -7.0f)) * glm::scale(identity<mat4>(), vec3(0.07f, 0.07f, 0.07f));
-
-//		glUniformMatrix4fv(texDirLightShader_modelMatrix, 1, GL_FALSE, (GLfloat*)&modelTransform);
-
+//
+	//	glUniformMatrix4fv(texDirLightShader_modelMatrix, 1, GL_FALSE, (GLfloat*)&modelTransform);
+//
 //		satMesh->setupTextures();
 //		satMesh->render();
 //	}
